@@ -43,7 +43,7 @@ def fold_bars(values, title, path):
 verbose = True
 batch_size = 128
 num_folds = 5
-epochs = 5
+epochs = 25
 model_type = 1
 
 if model_type == 0:

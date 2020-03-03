@@ -119,14 +119,6 @@ class CAN:
         can_adv_loss_path = folder + 'can_adversary_model_loss_fold{}.png'.format(fold)
         self.__line_graph(self.epoch_adversary_accuracy, can_adv_loss_title, can_adv_loss_path)
 
-
-    def __line_graph(self, vals, title, path):
-        plt.figure(figsize=(10, 15))
-        plt.plot(vals)
-        plt.title(title)
-        plt.savefig(path)
-        plt.close()
-
     def __update_epoch_vars(self, can_loss, classifier_acc, adversary_loss):
         self.epoch_can_loss = np.append(self.epoch_can_loss, can_loss)
         self.epoch_classifier_accuracy = np.append(self.epoch_classifier_accuracy, classifier_acc)
@@ -146,3 +138,11 @@ class CAN:
         :return: reversed labels
         """
         return 1 - protected_label
+
+    @staticmethod
+    def __line_graph(self, vals, title, path):
+        plt.figure(figsize=(10, 15))
+        plt.plot(vals)
+        plt.title(title)
+        plt.savefig(path)
+        plt.close()
