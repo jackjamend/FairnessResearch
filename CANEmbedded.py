@@ -1,10 +1,9 @@
 """
-Class for the classifier adversary network.
+Class for a CAN Embedded model.
 
-Creates the basic CAN
+The model will use a layer of size 2 before the output for the input into the adversary.
 
-Jack Amend
-2/29/2020
+Jack J Amend
 """
 
 import matplotlib.pyplot as plt
@@ -12,19 +11,21 @@ import tensorflow.keras as keras
 import numpy as np
 
 
-class CAN:
+class CANEmbedded:
     def __init__(self, num_input):
+        embedding_size = 2
         # Classifier
         in_ = keras.layers.Input(shape=(num_input,))
         fc1 = keras.layers.Dense(num_input // 2, activation="relu")(in_)
         fc2 = keras.layers.Dense(num_input // 4, activation="relu")(fc1)
         fc3 = keras.layers.Dense(num_input // 8, activation="relu")(fc2)
-        out = keras.layers.Dense(1, activation="sigmoid")(fc3)
+        adv_out = keras.layers.Dense(embedding_size, activation="relu")(fc3)
+        out = keras.layers.Dense(1, activation="sigmoid")(adv_out)
 
-        classifier = keras.models.Model(in_, out, name='classifier_model')
+        classifier = keras.models.Model(in_, [out, adv_out], name='classifier_model')
 
         # Discriminator
-        in_discrim = keras.layers.Input(shape=1, name="classifer_output")
+        in_discrim = keras.layers.Input(shape=embedding_size, name="classifer_output")
         dfc1 = keras.layers.Dense(25, activation="relu")(in_discrim)
         dout = keras.layers.Dense(1, activation="sigmoid")(dfc1)
         discrim = keras.models.Model(inputs=in_discrim, outputs=dout, name='adversary_model')
@@ -34,8 +35,8 @@ class CAN:
         discrim.trainable = False
 
         model_input = keras.layers.Input(shape=num_input)
-        class_pred = classifier(model_input)
-        protect_pred = discrim(class_pred)
+        class_pred, class_embed = classifier(model_input)
+        protect_pred = discrim(class_embed)
         bias_model = keras.models.Model(inputs=[model_input], outputs=[class_pred, protect_pred],
                                         name="bias_model")
 

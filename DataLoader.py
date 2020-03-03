@@ -1,3 +1,11 @@
+"""
+Formats data for ML training.
+
+Formats the UCI Adult data into numeric values.
+
+Jack Amend
+3/3/2020
+"""
 import pandas as pd
 
 def get_data_labels(file_name, verbose=1):
@@ -22,7 +30,6 @@ def get_data_labels(file_name, verbose=1):
                      'race', 'native-country']
 
     df = df.drop(['education'], axis=1)
-    print(df['label'].value_counts())
 
     for col in numeric_col:
         df[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
