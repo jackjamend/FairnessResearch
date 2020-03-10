@@ -68,12 +68,13 @@ class BasicModel:
 
         raw_prediction = self.model.predict(data, batch_size=batch_size)
         predictions = np.where(raw_prediction > .5, 1, 0)
-
+        
+        labels = np.reshape(labels, (len(labels), 1))        
+        
         # Confusion Matrix set up variables
         only_ones = predictions == 1
         only_zero = predictions == 0
 
-        # True Positive
         true_positive = sum(labels[only_ones] == 1)
         true_negative = sum(labels[only_zero] == 0)
         false_positive = sum(labels[only_ones] == 0)  # Type 1
@@ -84,10 +85,14 @@ class BasicModel:
     def __update_epoch_vars(self, loss, acc):
         self.epoch_loss = np.append(self.epoch_loss, loss)
         self.epoch_accuracy = np.append(self.epoch_accuracy, acc)
-
-    def create_figs(self, epoch, folder, fold):
+    
+    @staticmethod
+    def __reshape_1d(arr):
+        return np.reshape(arr, (len(arr), 1))
+    
+    def create_figs(self, epoch, folder):
         # Loss figure
-        loss_path = folder + 'basic_model_loss_fold{}.png'.format(fold)
+        loss_path = folder + 'basic_model_loss_epoch{}.png'.format(epoch)
         plt.figure(figsize=(10, 15))
         plt.plot(self.epoch_loss)
         plt.title("Basic Model Loss for {} Epochs".format(epoch))
@@ -95,7 +100,7 @@ class BasicModel:
         plt.close()
 
         # Accuracy figure
-        acc_path = folder + 'basic_model_acc_fold{}.png'.format(fold)
+        acc_path = folder + 'basic_model_acc_epoch{}.png'.format(epoch)
         plt.figure(figsize=(10, 15))
         plt.plot(self.epoch_accuracy)
         plt.title("Basic Model Accuracy for {} Epochs".format(epoch))

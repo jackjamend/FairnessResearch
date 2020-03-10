@@ -6,7 +6,8 @@ To test a model and use this script, model needs to implement:
     display_model()
     train(data, protected, labels, batch_size)
     test(data, protected, labels, batch_size)
-    create_figs(epoch, folder, fold)
+    confusion_matrix(data, protected, labels, batch_size)
+    create_figs(epoch, folder)
     result_graph_info() * static
 
 model_types:
@@ -47,12 +48,12 @@ def write_to_file(file_name, information):
 
 
 # Parameters for the script
-model_type = 1
+model_type = 0
 verbose = True
 batch_size = 128
 num_folds = 5
 testing_inv = 10
-epochs = 21
+epochs = 201
 fig_folder = 'model_testing/'
 
 if model_type == 0:
@@ -62,14 +63,15 @@ elif model_type == 1:
 else:
     print("Saving graphs to home directory")
 
-csv_file_str = fig_folder
-model_folder = fig_folder + 'models/'
-fig_folder = fig_folder + 'graphs/'
 
 # Record datetime
 start = datetime.now()
 start_string = start.strftime("%d/%m/%Y %H:%M:%S")
-fold_time_str = csv_file_str + start.strftime("%d-%m-%Y_%H-%M-%S")
+fold_time_str = fig_folder + 'epochs{}_'.format(epochs) + start.strftime("%d-%m-%Y_%H-%M-%S") +'/'
+
+csv_file_str = fold_time_str
+model_folder = fold_time_str + 'models/'
+fig_folder = fold_time_str + 'graphs/'
 
 # Loading data
 if verbose:
@@ -125,7 +127,7 @@ for i, (train_idx, test_idx) in enumerate(kf.split(data)):
             confusion_mat = model.confusion_matrix(test_data, test_attr, test_label, batch_size)
 
             # Recording Information
-            model.create_figs(epochs, fold_fig_folder, i)
+            model.create_figs(epoch, fold_fig_folder)
 
             # Variables to write to CSV
             curr_time = datetime.now()
@@ -135,7 +137,7 @@ for i, (train_idx, test_idx) in enumerate(kf.split(data)):
             record_vars = [start_string, curr_time_string, diff_time, i, epoch, *test_stats,
                            *confusion_mat, batch_size, fold_fig_folder, fold_model_folder]
 
-            write_to_file(fold_time_str+'_overview.csv', record_vars)
+            write_to_file(fold_time_str + 'overview.csv', record_vars)
 
     # Testing
     test_data = data[test_idx]
@@ -149,7 +151,7 @@ for i, (train_idx, test_idx) in enumerate(kf.split(data)):
     confusion_mat = model.confusion_matrix(test_data, test_attr, test_label, batch_size)
 
     # Recording Information
-    model.create_figs(epochs, fold_fig_folder, i)
+    model.create_figs(epochs, fold_fig_folder)
 
     # Variables to write to CSV
     curr_time = datetime.now()
@@ -159,7 +161,7 @@ for i, (train_idx, test_idx) in enumerate(kf.split(data)):
     record_vars = [start_string, curr_time_string, diff_time, i, epochs, results,
                    *confusion_mat, batch_size, fold_fig_folder, fold_model_folder]
 
-    write_to_file(fold_time_str + '_overview.csv', record_vars)
+    write_to_file(fold_time_str + 'overview.csv', record_vars)
 
 
 result_names, fig_files = model.result_graph_info()
