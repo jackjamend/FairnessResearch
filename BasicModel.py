@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import tensorflow.keras as keras
 import numpy as np
 
+
 class BasicModel:
     def __init__(self, num_input):
         in_ = keras.layers.Input(shape=(num_input+1,))
@@ -57,8 +58,28 @@ class BasicModel:
     def test(self, data, protected, labels, batch_size=128):
         protected = np.reshape(protected, (len(protected), 1))
         data = np.append(data, protected, 1)
+
         results = self.model.evaluate(data, labels, batch_size=batch_size)
         return results
+
+    def confusion_matrix(self, data, protected, labels, batch_size=128):
+        protected = np.reshape(protected, (len(protected), 1))
+        data = np.append(data, protected, 1)
+
+        raw_prediction = self.model.predict(data, batch_size=batch_size)
+        predictions = np.where(raw_prediction > .5, 1, 0)
+
+        # Confusion Matrix set up variables
+        only_ones = predictions == 1
+        only_zero = predictions == 0
+
+        # True Positive
+        true_positive = sum(labels[only_ones] == 1)
+        true_negative = sum(labels[only_zero] == 0)
+        false_positive = sum(labels[only_ones] == 0)  # Type 1
+        false_negative = sum(labels[only_zero] == 1)  # Type 2
+
+        return true_positive, true_negative, false_positive, false_negative
 
     def __update_epoch_vars(self, loss, acc):
         self.epoch_loss = np.append(self.epoch_loss, loss)
