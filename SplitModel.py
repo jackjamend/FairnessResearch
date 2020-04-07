@@ -1,5 +1,5 @@
 """
-Class file to create the basic classifier model
+Class file to create the split classifier model. Train two separate models on the data by gender
 """
 import matplotlib.pyplot as plt
 import tensorflow.keras as keras
@@ -8,16 +8,29 @@ import numpy as np
 
 class BasicModel:
     def __init__(self, num_input):
-        in_ = keras.layers.Input(shape=(num_input+1,))
-        fc1 = keras.layers.Dense(num_input // 2, activation="relu")(in_)
-        fc2 = keras.layers.Dense(num_input // 4, activation="relu")(fc1)
-        fc3 = keras.layers.Dense(num_input // 8, activation="relu")(fc2)
-        out = keras.layers.Dense(1, activation="sigmoid")(fc3)
+        # Male Model
+        male_in_ = keras.layers.Input(shape=(num_input + 1,))
+        male_fc1 = keras.layers.Dense(num_input // 2, activation="relu")(male_in_)
+        male_fc2 = keras.layers.Dense(num_input // 4, activation="relu")(male_fc1)
+        male_fc3 = keras.layers.Dense(num_input // 8, activation="relu")(male_fc2)
+        male_out = keras.layers.Dense(1, activation="sigmoid")(male_fc3)
 
-        classifier = keras.models.Model(in_, out, name='classifier_model')
-        classifier.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        male_classifier = keras.models.Model(male_in_, male_out, name='classifier_model')
+        male_classifier.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-        self.model = classifier
+        self.male_model = male_classifier
+
+        female_in_ = keras.layers.Input(shape=(num_input + 1,))
+        female_fc1 = keras.layers.Dense(num_input // 2, activation="relu")(female_in_)
+        female_fc2 = keras.layers.Dense(num_input // 4, activation="relu")(female_fc1)
+        female_fc3 = keras.layers.Dense(num_input // 8, activation="relu")(female_fc2)
+        female_out = keras.layers.Dense(1, activation="sigmoid")(female_fc3)
+
+        female_classifier = keras.models.Model(female_in_, female_out, name='classifier_model')
+        female_classifier.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+        self.male_model = male_classifier
+        self.female_model = female_classifier
 
         # Variables for tracking information
         self.epoch_loss = np.array([])
@@ -25,10 +38,17 @@ class BasicModel:
         self.num_trains = 0
 
     def display_models(self):
-        print("Model:")
-        print(self.model.summary())
+        print("Male Model:")
+        print(self.male_model.summary())
+
+        print("Female Model:")
+        print(self.male_model.summary())
 
     def train(self, data, protected, labels, batch_size=128):
+        # Get idxs for males and females
+        male_idx = protected == 0
+        female_idx = protected == 1
+
         self.num_trains += 1
         num_batches = data.shape[0] // batch_size
 
@@ -68,9 +88,9 @@ class BasicModel:
 
         raw_prediction = self.model.predict(data, batch_size=batch_size)
         predictions = np.where(raw_prediction > .5, 1, 0)
-        
-        labels = np.reshape(labels, (len(labels), 1))        
-        
+
+        labels = np.reshape(labels, (len(labels), 1))
+
         # Confusion Matrix set up variables
         only_ones = predictions == 1
         only_zero = predictions == 0
@@ -80,16 +100,16 @@ class BasicModel:
         false_positive = sum(labels[only_ones] == 0)  # Type 1
         false_negative = sum(labels[only_zero] == 1)  # Type 2
 
-        return np.array([true_positive, true_negative, false_positive, false_negative]) / labels.shape[0]
+        return true_positive, true_negative, false_positive, false_negative
 
     def __update_epoch_vars(self, loss, acc):
         self.epoch_loss = np.append(self.epoch_loss, loss)
         self.epoch_accuracy = np.append(self.epoch_accuracy, acc)
-    
+
     @staticmethod
     def __reshape_1d(arr):
         return np.reshape(arr, (len(arr), 1))
-    
+
     def create_figs(self, epoch, folder):
         # Loss figure
         loss_path = folder + 'basic_model_loss_epoch{}.png'.format(epoch)

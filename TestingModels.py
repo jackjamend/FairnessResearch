@@ -25,7 +25,7 @@ import numpy as np
 
 from sklearn.model_selection import KFold
 
-from DataLoader import get_data_labels
+from DataLoader import get_data_labels, get_balanced_data
 from BasicModel import BasicModel
 from CAN import CAN
 from pathlib import Path
@@ -46,9 +46,37 @@ def write_to_file(file_name, information):
         writer = csv.writer(csv_file)
         writer.writerow(information)
 
+def record_test_stats(model, data, protected, labels, test_idx, batch_size, epoch,
+                      fold_fig_folder, start, start_string, i, fold_model_folder,
+                      data_type, fold_time_str):
+    # Testing data
+    test_data = data[test_idx]
+    test_attr = protected[test_idx]
+    test_label = labels[test_idx]
+
+    # Model test statistics
+    test_stats = model.test(test_data, test_attr, test_label, batch_size)
+
+    # Confusion Matrix from model
+    confusion_mat = model.confusion_matrix(test_data, test_attr, test_label, batch_size)
+
+    # Recording Information
+    model.create_figs(epoch, fold_fig_folder)
+
+    # Variables to write to CSV 
+    curr_time = datetime.now()
+    curr_time_string = curr_time.strftime("%d/%m/%Y %H:%M:%S")
+    diff_time = curr_time - start
+
+    record_vars = [start_string, curr_time_string, diff_time, i, epoch, *test_stats,
+                   *confusion_mat, batch_size, fold_fig_folder, fold_model_folder, data_type]
+
+    write_to_file(fold_time_str + 'overview.csv', record_vars)
+
 
 # Parameters for the script
 model_type = 0
+data_type = 1  # 0 for original data, 1 for balanced gender
 verbose = True
 batch_size = 128
 num_folds = 5
@@ -76,7 +104,10 @@ fig_folder = fold_time_str + 'graphs/'
 # Loading data
 if verbose:
     print("Loading data.")
-data, labels, protected = get_data_labels("adult.data")
+if data_type == 0:
+    data, labels, protected = get_data_labels("adult.data")
+else:
+    data, labels, protected = get_balanced_data("adult.data")
 
 # Testing basic model
 if verbose:
@@ -114,54 +145,11 @@ for i, (train_idx, test_idx) in enumerate(kf.split(data)):
         model.train(train_data, train_prtd, train_label, batch_size)
 
         # Testing at defined interval
-        if epoch % testing_inv == 0:
-            # Testing data
-            test_data = data[test_idx]
-            test_attr = protected[test_idx]
-            test_label = labels[test_idx]
+        if epoch % testing_inv == 0 or epoch == epochs-1:
+            record_test_stats(model, data, protected, labels, test_idx, batch_size, epoch,
+                              fold_fig_folder, start, start_string, i, fold_model_folder,
+                              data_type, fold_time_str)
 
-            # Model test statistics
-            test_stats = model.test(test_data, test_attr, test_label, batch_size)
-
-            # Confusion Matrix from model
-            confusion_mat = model.confusion_matrix(test_data, test_attr, test_label, batch_size)
-
-            # Recording Information
-            model.create_figs(epoch, fold_fig_folder)
-
-            # Variables to write to CSV
-            curr_time = datetime.now()
-            curr_time_string = curr_time.strftime("%d/%m/%Y %H:%M:%S")
-            diff_time = curr_time - start
-
-            record_vars = [start_string, curr_time_string, diff_time, i, epoch, *test_stats,
-                           *confusion_mat, batch_size, fold_fig_folder, fold_model_folder]
-
-            write_to_file(fold_time_str + 'overview.csv', record_vars)
-
-    # Testing
-    test_data = data[test_idx]
-    test_attr = protected[test_idx]
-    test_label = labels[test_idx]
-
-    results = model.test(test_data, test_attr, test_label)
-    test_results = np.concatenate([test_results, results])
-
-    # Confusion Matrix from model
-    confusion_mat = model.confusion_matrix(test_data, test_attr, test_label, batch_size)
-
-    # Recording Information
-    model.create_figs(epochs, fold_fig_folder)
-
-    # Variables to write to CSV
-    curr_time = datetime.now()
-    curr_time_string = curr_time.strftime("%d/%m/%Y %H:%M:%S")
-    diff_time = curr_time - start
-
-    record_vars = [start_string, curr_time_string, diff_time, i, epochs, results,
-                   *confusion_mat, batch_size, fold_fig_folder, fold_model_folder]
-
-    write_to_file(fold_time_str + 'overview.csv', record_vars)
 
 
 result_names, fig_files = model.result_graph_info()

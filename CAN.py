@@ -124,10 +124,10 @@ class CAN:
         prot_only_ones = protected_preds == 1
         prot_only_zero = protected_preds == 0
 
-        vals[4] = sum(labels[prot_only_ones] == 1)  # True Pos
-        vals[5] = sum(labels[prot_only_zero] == 0)  # True Neg
-        vals[6] = sum(labels[prot_only_ones] == 0)  # Type 1
-        vals[7] = sum(labels[prot_only_zero] == 1)  # Type 2
+        vals[4] = sum(protected[prot_only_ones] == 1)  # True Pos
+        vals[5] = sum(protected[prot_only_zero] == 0)  # True Neg
+        vals[6] = sum(protected[prot_only_ones] == 0)  # Type 1
+        vals[7] = sum(protected[prot_only_zero] == 1)  # Type 2
         
         return vals / labels.shape[0]
 
