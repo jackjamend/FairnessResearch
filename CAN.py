@@ -24,7 +24,7 @@ class CAN:
         classifier = keras.models.Model(in_, out, name='classifier_model')
 
         # Discriminator
-        in_discrim = keras.layers.Input(shape=1, name="classifer_output")
+        in_discrim = keras.layers.Input(shape=1, name="adversary_input")
         dfc1 = keras.layers.Dense(25, activation="relu")(in_discrim)
         dout = keras.layers.Dense(1, activation="sigmoid")(dfc1)
         discrim = keras.models.Model(inputs=in_discrim, outputs=dout, name='adversary_model')

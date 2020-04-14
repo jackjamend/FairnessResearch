@@ -63,7 +63,7 @@ def record_test_stats(model, data, protected, labels, test_idx, batch_size, epoc
     # Recording Information
     model.create_figs(epoch, fold_fig_folder)
 
-    # Variables to write to CSV 
+    # Variables to write to CSV
     curr_time = datetime.now()
     curr_time_string = curr_time.strftime("%d/%m/%Y %H:%M:%S")
     diff_time = curr_time - start
@@ -75,8 +75,8 @@ def record_test_stats(model, data, protected, labels, test_idx, batch_size, epoc
 
 
 # Parameters for the script
-model_type = 0
-data_type = 1  # 0 for original data, 1 for balanced gender
+model_type = 1
+data_type = 0  # 0 for original data, 1 for balanced gender
 verbose = True
 batch_size = 128
 num_folds = 5
@@ -149,7 +149,6 @@ for i, (train_idx, test_idx) in enumerate(kf.split(data)):
             record_test_stats(model, data, protected, labels, test_idx, batch_size, epoch,
                               fold_fig_folder, start, start_string, i, fold_model_folder,
                               data_type, fold_time_str)
-
 
 
 result_names, fig_files = model.result_graph_info()
