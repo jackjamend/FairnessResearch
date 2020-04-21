@@ -12,8 +12,8 @@ import numpy as np
 
 
 class CANEmbedded:
-    def __init__(self, num_input):
-        embedding_size = 2
+    def __init__(self, num_input, embedding_size=2):
+
         # Classifier
         in_ = keras.layers.Input(shape=(num_input,))
         fc1 = keras.layers.Dense(num_input // 2, activation="relu")(in_)
@@ -75,14 +75,14 @@ class CANEmbedded:
         for batch_idx in range(num_batches):
             idx = np.random.randint(0, data.shape[0], batch_size)  # Look at better batching
 
-            x = data[idx]
-            y = labels[idx]
-            z = protected[idx]
+            X = data[idx]
+            Y = labels[idx]
+            Z = protected[idx]
 
-            predicted_y = self.classifier.predict([x])
+            predicted_y = self.classifier.predict([X])
 
-            self.adversary.train_on_batch(predicted_y, z)
-            batch_results = self.model.train_on_batch(x, [y, self.__flip_label(z)])
+            self.adversary.train_on_batch(predicted_y, Z)
+            batch_results = self.model.train_on_batch(X, [Y, self.__flip_label(Z)])
 
             model_loss = batch_results[0]
             classifier_acc = batch_results[3]
