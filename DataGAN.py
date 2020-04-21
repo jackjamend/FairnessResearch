@@ -27,13 +27,13 @@ class DataGAN:
         discrim.trainable = False
 
         model_input = keras.layers.Input(shape=input_size_noise)
-        class_pred = generator(model_input)
-        discrim_out = discrim(class_pred)
+        fake_data = generator(model_input)
+        discrim_out = discrim(fake_data)
         gan_model = keras.models.Model(inputs=[model_input], outputs=[discrim_out],
                                         name="bias_model")
 
         loss_dict = {'adversary_model': 'binary_crossentropy'}
-            # 'generator_model': 'binary_crossentropy', this makes error
+                     #'generator_model': 'binary_crossentropy'}  # , this makes error
                      # MSE for regression bce for classification
                        # for multiclass, categorical_crossentropy
 
@@ -81,7 +81,7 @@ class DataGAN:
             print("adv: ",adv_train_results)
             gan_x = self.make_noise(self.gan_input_size, batch_size)
 
-            gan_y = np.ones(shape=(len(gan_x), 1))
+            gan_y = np.zeros(shape=(len(gan_x), 1))
 
             model_train_results = self.model.train_on_batch(gan_x, gan_y)
             print("model: ", model_train_results)
