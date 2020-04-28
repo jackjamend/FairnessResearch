@@ -6,13 +6,16 @@ import numpy as np
 from sklearn.model_selection import KFold
 from BasicModel import BasicModel
 from CAN import CAN
+from CANEmbedded import CANEmbedded
+from SplitModel import SplitModel
 from pathlib import Path
 from datetime import datetime
 from DataLoader import DataLoader
 import matplotlib.pyplot as plt
 import csv
 
-def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=128, testing_inv=10):
+
+def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=128, testing_inv=10, embed_size=0):
     '''
     Runs experiment for given different configurations.
     :param model_type: type of model. 0 for basic. 1 for CAN
@@ -44,7 +47,7 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
 
     def record_test_stats(model, data, protected, labels, test_idx, batch_size, epoch,
                           fold_fig_folder, start, start_string, i, fold_model_folder,
-                          data_type, fold_time_str):
+                          data_type, fold_time_str, embed_size):
         # Testing data
         test_data = data[test_idx]
         test_attr = protected[test_idx]
@@ -65,7 +68,8 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
         diff_time = curr_time - start
 
         record_vars = [start_string, curr_time_string, diff_time, i, epoch, *test_stats,
-                       *confusion_mat, batch_size, fold_fig_folder, fold_model_folder, data_type]
+                       *confusion_mat, batch_size, fold_fig_folder, fold_model_folder,
+                       data_type, embed_size]
 
         write_to_file(fold_time_str + 'overview.csv', record_vars)
 
@@ -75,6 +79,10 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
         fig_folder += 'basic/'
     elif model_type == 1:
         fig_folder += 'can/'
+    elif model_type == 2:
+        fig_folder += 'can_embed/embed_size{}/'.format(embed_size)
+    elif model_type == 3:
+        fig_folder += 'split/'
 
     # Record datetime
     start = datetime.now()
@@ -98,6 +106,10 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
             model = BasicModel(input_size)
         elif model_type == 1:
             model = CAN(input_size)
+        elif model_type == 2:
+            model = CANEmbedded(input_size, embed_size)
+        elif model_type == 3:
+            model = SplitModel(input_size)
 
         model.display_models()
 
@@ -121,9 +133,29 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
             if epoch % testing_inv == 0 or epoch == epochs - 1:
                 record_test_stats(model, data, protected, labels, test_idx, batch_size, epoch,
                                   fold_fig_folder, start, start_string, i, fold_model_folder,
-                                  data_type, fold_time_str)
+                                  data_type, fold_time_str, embed_size)
+            if epoch % 100 == 0 or epoch == epochs - 1:
+                model.model_save(fold_model_folder, epoch)
         result_names, fig_files = model.result_graph_info()
         incr = len(test_results) // epochs
         for i in range(incr):
             graph_vals = test_results[i::incr]
             fold_bars(graph_vals, result_names[i], fig_folder + fig_files[i])
+
+
+epochs = 500
+
+run_experiment(0, 0, epochs)
+run_experiment(1, 0, epochs)
+run_experiment(2, 0, epochs, embed_size=2)
+run_experiment(2, 0, epochs, embed_size=3)
+run_experiment(2, 0, epochs, embed_size=4)
+run_experiment(3, 0, epochs)
+run_experiment(0, 1, epochs)
+run_experiment(1, 1, epochs)
+run_experiment(2, 1, epochs, embed_size=2)
+run_experiment(2, 1, epochs, embed_size=3)
+run_experiment(2, 1, epochs, embed_size=4)
+run_experiment(3, 1, epochs)
+
+

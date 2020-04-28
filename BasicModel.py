@@ -4,6 +4,7 @@ Class file to create the basic classifier model
 import matplotlib.pyplot as plt
 import tensorflow.keras as keras
 import numpy as np
+from sklearn.metrics import confusion_matrix
 
 
 class BasicModel:
@@ -69,18 +70,11 @@ class BasicModel:
         raw_prediction = self.model.predict(data, batch_size=batch_size)
         predictions = np.where(raw_prediction > .5, 1, 0)
         
-        labels = np.reshape(labels, (len(labels), 1))        
-        
-        # Confusion Matrix set up variables
-        only_ones = predictions == 1
-        only_zero = predictions == 0
+        labels = np.reshape(labels, (len(labels), 1))
 
-        true_positive = sum(labels[only_ones] == 1)
-        true_negative = sum(labels[only_zero] == 0)
-        false_positive = sum(labels[only_ones] == 0)  # Type 1
-        false_negative = sum(labels[only_zero] == 1)  # Type 2
+        cm = confusion_matrix(labels, predictions)
 
-        return np.array([true_positive, true_negative, false_positive, false_negative]) / labels.shape[0]
+        return cm.flatten() / labels.shape[0]
 
     def __update_epoch_vars(self, loss, acc):
         self.epoch_loss = np.append(self.epoch_loss, loss)
@@ -106,6 +100,9 @@ class BasicModel:
         plt.title("Basic Model Accuracy for {} Epochs".format(epoch))
         plt.savefig(acc_path)
         plt.close()
+
+    def model_save(self, path, epoch):
+        self.model.save(path+'basic_at_{}.h5'.format(epoch))
 
     @staticmethod
     def result_graph_info():

@@ -79,9 +79,9 @@ class CANEmbedded:
             Y = labels[idx]
             Z = protected[idx]
 
-            predicted_y = self.classifier.predict([X])
+            predicted_y, out_embedd = self.classifier.predict([X])
 
-            self.adversary.train_on_batch(predicted_y, Z)
+            self.adversary.train_on_batch(out_embedd, Z)
             batch_results = self.model.train_on_batch(X, [Y, self.__flip_label(Z)])
 
             model_loss = batch_results[0]
@@ -102,26 +102,65 @@ class CANEmbedded:
 
         return np.take(results, [0,3,4])
 
-    def create_figs(self, epoch, folder, fold):
+    def create_figs(self, epoch, folder):
         # CAN Loss
-        can_loss_title = 'CAN Model Loss for {} Epochs'.format(epoch)
-        can_loss_path = folder + 'can_model_loss_fold{}.png'.format(fold)
+        can_loss_title = 'CAN Embed Model Loss for {} Epochs'.format(epoch)
+        can_loss_path = folder + 'can_embed_model_loss_epoch{}.png'.format(epoch)
         self.__line_graph(self.epoch_can_loss, can_loss_title, can_loss_path)
 
         # Classifier Accuracy
-        can_class_loss_title = 'CAN Classifier Accuracy for {} Epochs'.format(epoch)
-        can_class_loss_path = folder + 'can_classifier_model_loss_fold{}.png'.format(fold)
+        can_class_loss_title = 'CAN Embed Classifier Accuracy for {} Epochs'.format(epoch)
+        can_class_loss_path = folder + 'can_embed_classifier_model_loss_epoch{}.png'.format(epoch)
         self.__line_graph(self.epoch_classifier_accuracy, can_class_loss_title, can_class_loss_path)
 
         # Adversary Accuracy
-        can_adv_loss_title = 'CAN Adversary Accuracy for {} Epochs'.format(epoch)
-        can_adv_loss_path = folder + 'can_adversary_model_loss_fold{}.png'.format(fold)
+        can_adv_loss_title = 'CAN Embed Adversary Accuracy for {} Epochs'.format(epoch)
+        can_adv_loss_path = folder + 'can_embed_adversary_model_loss_epoch{}.png'.format(epoch)
         self.__line_graph(self.epoch_adversary_accuracy, can_adv_loss_title, can_adv_loss_path)
 
     def __update_epoch_vars(self, can_loss, classifier_acc, adversary_loss):
         self.epoch_can_loss = np.append(self.epoch_can_loss, can_loss)
         self.epoch_classifier_accuracy = np.append(self.epoch_classifier_accuracy, classifier_acc)
         self.epoch_adversary_accuracy = np.append(self.epoch_adversary_accuracy, adversary_loss)
+
+    def confusion_matrix(self, data, protected, labels, batch_size=128):
+        raw_class_preds, raw_protected_preds = self.model.predict(data, batch_size=batch_size)
+
+        protected = self.__reshape_1d(protected)
+        labels = self.__reshape_1d(labels)
+
+        vals = np.zeros((8))
+
+        # Label class predicitons
+        class_preds = np.where(raw_class_preds > .5, 1, 0)
+        class_only_ones = class_preds == 1
+        class_only_zero = class_preds == 0
+
+        vals[0] = sum(labels[class_only_ones] == 1)  # True Pos
+        vals[1] = sum(labels[class_only_zero] == 0)  # True Neg
+        vals[2] = sum(labels[class_only_ones] == 0)  # Type 1
+        vals[3] = sum(labels[class_only_zero] == 1)  # Type 2
+
+        # Protected class predictions
+        protected_preds = np.where(raw_class_preds > .5, 1, 0)
+        prot_only_ones = protected_preds == 1
+        prot_only_zero = protected_preds == 0
+
+        vals[4] = sum(protected[prot_only_ones] == 1)  # True Pos
+        vals[5] = sum(protected[prot_only_zero] == 0)  # True Neg
+        vals[6] = sum(protected[prot_only_ones] == 0)  # Type 1
+        vals[7] = sum(protected[prot_only_zero] == 1)  # Type 2
+
+        return vals / labels.shape[0]
+
+    def model_save(self, path, epoch):
+        self.model.save(path + 'bias_model_at_{}.h5'.format(epoch))
+        self.adversary.save(path + 'adversary_at_{}.h5'.format(epoch))
+        self.classifier.save(path + 'classifier_at_{}.h5'.format(epoch))
+
+    @staticmethod
+    def __reshape_1d(arr):
+        return np.reshape(arr, (len(arr), 1))
 
     @staticmethod
     def result_graph_info():
@@ -139,7 +178,7 @@ class CANEmbedded:
         return 1 - protected_label
 
     @staticmethod
-    def __line_graph(self, vals, title, path):
+    def __line_graph(vals, title, path):
         plt.figure(figsize=(10, 15))
         plt.plot(vals)
         plt.title(title)

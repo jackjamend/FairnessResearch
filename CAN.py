@@ -131,6 +131,11 @@ class CAN:
         
         return vals / labels.shape[0]
 
+    def model_save(self, path, epoch):
+        self.model.save(path+'bias_model_at_{}.h5'.format(epoch))
+        self.adversary.save(path+'adversary_at_{}.h5'.format(epoch))
+        self.classifier.save(path+'classifier_at_{}.h5'.format(epoch))
+
     def create_figs(self, epoch, folder):
         # CAN Loss
         can_loss_title = 'CAN Model Loss for {} Epochs'.format(epoch)
