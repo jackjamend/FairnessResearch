@@ -1,100 +1,142 @@
-import tensorflow.keras as keras
+#import tensorflow.keras as keras
+from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
 
 class DataGAN:
-    def __init__(self, num_variables, input_size_noise=100):
-        # Generator
-        in_ = keras.layers.Input(shape=(input_size_noise,))
-        fc1 = keras.layers.Dense(64, activation="relu")(in_)  # Make variables for testing
-        fc2 = keras.layers.Dense(128, activation="relu")(fc1)
-        fc3 = keras.layers.Dense(64, activation="relu")(fc2)
-        fc4 = keras.layers.Dense(128, activation="relu")(fc3)
-        fc5 = keras.layers.Dense(64, activation="relu")(fc4)
-        out = keras.layers.Dense(num_variables, activation="sigmoid")(fc5)  # Needs to be bigger
+    def __init__(self, data_dim, latent_dim=100, n_classes=2, lr=2e-4):
+        """
+        Define generator, discriminator, and combined GAN models.
+        Inputs:
+        - data_dim: how many attributes are in the vector to be generated.
+        - latent_dim: size of noise vector to be input
+          (i.e., dimensionality of latent space).
+        - n_classes: how many different classes are possible for the conditional input
+          (e.g., 2 for male/female)
+        - lr: learning rate (same for gen and discrim for now)
+        """
+        n_nodes = 128
 
-        generator = keras.models.Model(in_, out, name='generator_model')
+        # Generator
+        in_label_gen = keras.layers.Input(shape=(1,)) # Define input for conditional input
+        in_noise = keras.layers.Input(shape=(latent_dim,)) # Define input for noise vector
+        in_gen = keras.layers.Concatenate()([in_label_gen, in_noise])
+
+        x = keras.layers.Dense(n_nodes, activation="relu")(in_gen)
+        x = keras.layers.Dense(n_nodes*2, activation="relu")(x)
+        x = keras.layers.Dense(n_nodes*4, activation="relu")(x)
+        out_gen = keras.layers.Dense(data_dim, activation="sigmoid")(x)
+        model_gen = keras.models.Model([in_noise, in_label_gen], out_gen, name='generator_model')
 
         # Discriminator
-        in_discrim = keras.layers.Input(shape=num_variables, name="adversary_input")
-        dfc1 = keras.layers.Dense(25, activation="relu")(in_discrim)
-        dfc2 = keras.layers.Dense(16, activation="relu")(dfc1)
-        dout = keras.layers.Dense(1, activation="sigmoid")(dfc2)
-        discrim = keras.models.Model(inputs=in_discrim, outputs=dout, name='adversary_model')
+        in_label_discrim = keras.layers.Input(shape=(1,)) # Define input for conditional input
+        in_data = keras.layers.Input(shape=data_dim, name="adversary_input")
+        in_discrim = keras.layers.Concatenate()([in_label_discrim, in_data])
+        x = keras.layers.Dense(n_nodes*4, activation="relu")(in_discrim)
+#         x = keras.layers.Dropout(0.1)(x)
+        x = keras.layers.Dense(n_nodes*2, activation="relu")(x)
+#         x = keras.layers.Dropout(0.1)(x)
+        x = keras.layers.Dense(n_nodes, activation="relu")(x)
+        out_discrim = keras.layers.Dense(1, activation="sigmoid")(x)
+        model_discrim = keras.models.Model(inputs=[in_data, in_label_discrim], outputs=out_discrim, name='adversary_model')
 
-        adam = keras.optimizers.Adam(2e-4)
-        discrim.compile(optimizer=adam, loss="binary_crossentropy", metrics=['accuracy'])
-        discrim.trainable = False
+        adam = keras.optimizers.Adam(lr)
+        model_discrim.compile(optimizer=adam, loss="binary_crossentropy", metrics=['accuracy'])
 
-        model_input = keras.layers.Input(shape=input_size_noise)
-        fake_data = generator(model_input)
-        discrim_out = discrim(fake_data)
-        gan_model = keras.models.Model(inputs=[model_input], outputs=[discrim_out],
-                                        name="bias_model")
+        # Combined GAN
+        model_discrim.trainable = False
+        # get noise and label inputs from generator model
+        gen_noise, gen_label = model_gen.input
+        # get output from the generator model
+        gen_output = model_gen.output
+        # connect output and label input from generator as inputs to discriminator
+        out_gan = model_discrim([gen_output, gen_label])
+        # define gan model as taking noise and label and outputting a classification
+        model_gan = keras.models.Model([gen_noise, gen_label], out_gan, name='gan_model')
+        # compile model
+        opt = keras.optimizers.Adam(lr)
+        model_gan.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
 
-        loss_dict = {'adversary_model': 'binary_crossentropy'}
-                     #'generator_model': 'binary_crossentropy'}  # , this makes error
-                     # MSE for regression bce for classification
-                       # for multiclass, categorical_crossentropy
+        self.model = model_gan
+        self.generator = model_gen
+        self.adversary = model_discrim
+        self.output_size = data_dim
+        self.latent_dim = latent_dim
 
-        loss_wts = {'adversary_model': 1}
-        gan_model.compile(optimizer="adam", loss=loss_dict, loss_weights=loss_wts, metrics=['accuracy'])
+    def retrieve_data(self, data, label, idx):
+        return data[idx], label[idx]
 
-        self.model = gan_model
-        self.generator = generator
-        self.adversary = discrim
-        self.input_size = num_variables
-        self.gan_input_size = input_size_noise
+    # generate points in latent space as input for the generator
+    def generate_latent_points(self, latent_dim, n_samples, n_classes=2):
+        # generate points in the latent space
+        z_input = np.random.standard_normal(size=(n_samples, latent_dim))
+        # generate conditional input
+        cond_input = np.random.randint(0, n_classes, n_samples)
+        return [z_input, cond_input]
 
-    @staticmethod
-    def make_noise(input_size, num_entries):
-        gender = np.array([0,1] * (num_entries // 2)).reshape((num_entries, 1))
-        noise = np.random.normal(size=(num_entries, input_size-1))
-        noise_data = np.concatenate((noise, gender), axis=1)
-        return noise_data
+    # use the generator to generate n fake examples, with class labels
+    def generate_fake_samples(self, latent_dim, n_samples):
+        # generate points in latent space
+        z_input, cond_input = self.generate_latent_points(latent_dim, n_samples)
+        # predict outputs
+        data = self.generator.predict([z_input, cond_input])
+        # create class labels (zeros for fake)
+        y = np.zeros((n_samples, 1))
+        return [data, cond_input], y
 
-    def create_data(self, input_size, num_entries):
-        noise_data = self.make_noise(input_size, num_entries)
-        created_data = self.generator.predict(noise_data)
-        return created_data
-
-    def retrieve_data(self, data, idx):
-        return data[idx]
-
-    def train(self, data, num_fake_data, batch_size=128):
+    def train(self, data, cond_label, batch_size=128, n_classes=2):
+        """
+        Train for 1 epoch.
+        Inputs:
+        - data: real examples, N x D.
+        - cond_label: conditional attribute (e.g., gender), N x 1
+        - batch_size: examples per batch
+        - n_classes: how many distinct categories there are for the conditional attribute (e.g., 2)
+        """
         num_batches = data.shape[0] // batch_size
+        half_batch = batch_size // 2
 
-        can_batch_loss = np.array([])
-        classifier_batch_accuracy = np.array([])
-        adversary_batch_accuracy = np.array([])
+        d_loss = []
+        d_acc = []
+        g_loss = []
+        g_acc = []
+
         for batch_idx in range(num_batches):
-            idx = np.random.randint(0, data.shape[0], batch_size)  # Look at better batching
+            idx = np.random.randint(0, data.shape[0], half_batch)  # Look at better batching
 
-            x_real = self.retrieve_data(data, idx)
-            x_fake = self.create_data(self.gan_input_size, num_fake_data)
-            y_real = np.zeros(shape=(len(x_real), 1))
-            y_fake = np.ones(shape=(len(x_fake), 1))
+            # First train the discriminator with real data
+            x_real, cond_input = self.retrieve_data(data, cond_label, idx)
+            y_real = np.ones(shape=(len(x_real), 1)) # Discrim wants to predict real data as 1
+            # update discriminator model weights
+            # d_loss1, _ = self.adversary.train_on_batch([x_real, cond_input], y_real)
+            d_results1 = self.adversary.train_on_batch([x_real, cond_input], y_real)
 
-            x = np.vstack((x_real, x_fake))
-            y = np.vstack((y_real, y_fake))
-            adv_train_results = self.adversary.train_on_batch(x,y)  # Train discriminator
-            print("adv: ",adv_train_results)
-            gan_x = self.make_noise(self.gan_input_size, batch_size)
+            # generate 'fake' examples
+            [X_fake, cond_input], y_fake = self.generate_fake_samples(self.latent_dim, half_batch)
+            # update discriminator model weights
+            d_results2 = self.adversary.train_on_batch([X_fake, cond_input], y_fake) # Discrim wants to predict fake data as 0
 
-            gan_y = np.zeros(shape=(len(gan_x), 1))
+            # Next we train the generator by way of the entire GAN
+            # prepare points in latent space as input for the generator
+            [z_input, cond_input] = self.generate_latent_points(self.latent_dim, batch_size, n_classes)
+            # create inverted labels for the fake samples
+            # (since we're training the generator, we want to fool the discriminator)
+            y_gan = np.ones((batch_size, 1))
+            # update the generator via the discriminator's error
+            g_results = self.model.train_on_batch([z_input, cond_input], y_gan)
+            
+            # Average discriminator loss
+            d_loss_curr = (d_results1[0] + d_results2[0]) / 2
+            g_loss_curr = g_results[0]
 
-            model_train_results = self.model.train_on_batch(gan_x, gan_y)
-            print("model: ", model_train_results)
-            # Set up variables for recording training stats
-            # model_loss = batch_results[0]
-            # classifier_acc = batch_results[3]
-            # adversary_acc = batch_results[4]
-            #
-            # can_batch_loss = np.append(can_batch_loss, model_loss)
-            # classifier_batch_accuracy = np.append(classifier_batch_accuracy, classifier_acc)
-            # adversary_batch_accuracy = np.append(adversary_batch_accuracy, adversary_acc)
+            # summarize loss on this batch
+            if (batch_idx+1) % 25 == 0:
+                print('> {}/{}, d={:.3f}, g={:.3f}'.format(
+                    batch_idx+1, num_batches, d_loss_curr, g_loss_curr))
 
-        # can_loss = can_batch_loss.mean()
-        # class_acc = classifier_batch_accuracy.mean()
-        # adv_acc = adversary_batch_accuracy.mean()
-        # self.__update_epoch_vars(can_loss, class_acc, adv_acc)
+            d_loss.append(d_loss_curr)
+            g_loss.append(g_loss_curr)
+            d_acc.append((d_results1[1] + d_results2[1]) / 2)
+            g_acc.append(g_results[1])
+
+        return d_loss, g_loss, d_acc, g_acc
