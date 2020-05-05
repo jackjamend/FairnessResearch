@@ -30,17 +30,19 @@ class DataLoader:
                          'race', 'native-country']
         df = self.df.copy()
         df = df.drop(['education'], axis=1)
-        for col in numeric_col:
-            df[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
-
-        for bol in boolean_cols:
-            df[bol] = df[bol].apply(lambda x: 0.0 if x == df[bol][0] else 1.0)
 
         if balanced:
+
             df.sex = df.sex.str.strip()
             gender_counts = df.sex.value_counts()
             diff_needed = gender_counts['Male'] - gender_counts['Female']
             df = df.append(df[df.sex == 'Female'].sample(diff_needed, replace=True, random_state=7215))
+
+        for bol in boolean_cols:
+            df[bol] = df[bol].apply(lambda x: 0.0 if x == df[bol][0] else 1.0)
+
+        for col in numeric_col:
+            df[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
 
         df = pd.get_dummies(df, columns=category_cols)
         data = df.drop('label', axis=1).values

@@ -45,6 +45,15 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
             writer = csv.writer(csv_file)
             writer.writerow(information)
 
+    def write_idxs_to_txt(file_name, train, test):
+        train_str = [str(num)+'\n' for num in train]
+        test_str = [str(num)+'\n' for num in test]
+        with open(file_name, 'w') as file:
+            file.writelines(train_str)
+            file.write('--------\n')
+            file.writelines(test_str)
+
+
     def record_test_stats(model, data, protected, labels, test_idx, batch_size, epoch,
                           fold_fig_folder, start, start_string, i, fold_model_folder,
                           data_type, fold_time_str, embed_size):
@@ -102,6 +111,7 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
     test_results = np.array([])
 
     for i, (train_idx, test_idx) in enumerate(kf.split(data)):
+        print("Fold {}".format(i))
         if model_type == 0:
             model = BasicModel(input_size)
         elif model_type == 1:
@@ -119,12 +129,14 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
         Path(fold_fig_folder).mkdir(parents=True, exist_ok=True)
         Path(fold_model_folder).mkdir(parents=True, exist_ok=True)
         # Get training data
+
+        write_idxs_to_txt(fold_time_str + 'idxs_fold{}.txt'.format(i), train_idx, test_idx)
         train_data = data[train_idx]
         train_prtd = protected[train_idx]
         train_label = labels[train_idx]
         for epoch in range(epochs):
-
-            print("Epoch: {}".format(epoch))
+            if epoch % testing_inv == 0 or epoch == epochs - 1:
+                print("\tEpoch: {}".format(epoch))
 
             # Train model
             model.train(train_data, train_prtd, train_label, batch_size)
@@ -144,18 +156,16 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
 
 
 epochs = 500
-
-run_experiment(0, 0, epochs)
-run_experiment(1, 0, epochs)
-run_experiment(2, 0, epochs, embed_size=2)
-run_experiment(2, 0, epochs, embed_size=3)
-run_experiment(2, 0, epochs, embed_size=4)
-run_experiment(3, 0, epochs)
-run_experiment(0, 1, epochs)
+#
+# run_experiment(0, 0, epochs)
+# run_experiment(1, 0, epochs)
+# run_experiment(2, 0, epochs, embed_size=2)
+# run_experiment(2, 0, epochs, embed_size=3)
+# run_experiment(2, 0, epochs, embed_size=4)
+# run_experiment(3, 0, epochs)
+# run_experiment(0, 1, epochs)
 run_experiment(1, 1, epochs)
-run_experiment(2, 1, epochs, embed_size=2)
-run_experiment(2, 1, epochs, embed_size=3)
-run_experiment(2, 1, epochs, embed_size=4)
-run_experiment(3, 1, epochs)
-
-
+# run_experiment(2, 1, epochs, embed_size=2)
+# run_experiment(2, 1, epochs, embed_size=3)
+# run_experiment(2, 1, epochs, embed_size=4)
+# run_experiment(3, 1, epochs)

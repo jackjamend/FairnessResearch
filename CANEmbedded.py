@@ -9,7 +9,7 @@ Jack J Amend
 import matplotlib.pyplot as plt
 import tensorflow.keras as keras
 import numpy as np
-
+from sklearn.metrics import confusion_matrix
 
 class CANEmbedded:
     def __init__(self, num_input, embedding_size=2):
@@ -124,34 +124,62 @@ class CANEmbedded:
         self.epoch_adversary_accuracy = np.append(self.epoch_adversary_accuracy, adversary_loss)
 
     def confusion_matrix(self, data, protected, labels, batch_size=128):
+        gender_cms = self.__gender_confusion_matrix(data, protected, labels)
         raw_class_preds, raw_protected_preds = self.model.predict(data, batch_size=batch_size)
 
         protected = self.__reshape_1d(protected)
         labels = self.__reshape_1d(labels)
 
-        vals = np.zeros((8))
-
         # Label class predicitons
         class_preds = np.where(raw_class_preds > .5, 1, 0)
-        class_only_ones = class_preds == 1
-        class_only_zero = class_preds == 0
-
-        vals[0] = sum(labels[class_only_ones] == 1)  # True Pos
-        vals[1] = sum(labels[class_only_zero] == 0)  # True Neg
-        vals[2] = sum(labels[class_only_ones] == 0)  # Type 1
-        vals[3] = sum(labels[class_only_zero] == 1)  # Type 2
+        class_cm = confusion_matrix(labels, class_preds).flatten()
 
         # Protected class predictions
-        protected_preds = np.where(raw_class_preds > .5, 1, 0)
-        prot_only_ones = protected_preds == 1
-        prot_only_zero = protected_preds == 0
+        protected_preds = np.where(raw_protected_preds > .5, 1, 0)
+        protected_cm = confusion_matrix(protected, protected_preds).flatten()
 
-        vals[4] = sum(protected[prot_only_ones] == 1)  # True Pos
-        vals[5] = sum(protected[prot_only_zero] == 0)  # True Neg
-        vals[6] = sum(protected[prot_only_ones] == 0)  # Type 1
-        vals[7] = sum(protected[prot_only_zero] == 1)  # Type 2
+        cms = np.append(class_cm, protected_cm).flatten() / labels.shape[0]
 
-        return vals / labels.shape[0]
+        return np.append(cms, gender_cms).flatten()
+
+    def __gender_confusion_matrix(self, data, protected, labels, batch_size=128):
+        male_idx = protected == 0
+        female_idx = protected == 1
+
+        male_data = data[male_idx]
+        male_protected = protected[male_idx]
+        male_labels = labels[male_idx]
+
+        # For Male
+        raw_male_class_preds, raw_male_protected_preds = self.model.predict(male_data, batch_size=batch_size)
+
+        male_labels = self.__reshape_1d(male_labels)
+        male_class_preds = np.where(raw_male_class_preds > .5, 1, 0)
+        label_male_cm = confusion_matrix(male_labels, male_class_preds)
+
+        male_protected = self.__reshape_1d(male_protected)
+        male_protected_preds = np.where(raw_male_protected_preds > .5, 1, 0)
+        protected_male_cm = confusion_matrix(male_protected, male_protected_preds)
+
+        # For female
+        female_data = data[female_idx]
+        female_protected = protected[female_idx]
+        female_labels = labels[female_idx]
+
+        raw_female_class_preds, raw_female_protected_preds = self.model.predict(female_data, batch_size=batch_size)
+
+        female_labels = self.__reshape_1d(female_labels)
+        female_class_preds = np.where(raw_female_class_preds > .5, 1, 0)
+        label_female_cm = confusion_matrix(female_labels, female_class_preds)
+
+        female_protected = self.__reshape_1d(female_protected)
+        female_protected_preds = np.where(raw_female_protected_preds > .5, 1, 0)
+        protected_female_cm = confusion_matrix(female_protected, female_protected_preds)
+
+        male_cms = np.append(label_male_cm, protected_male_cm).flatten() / male_data.shape[0]
+        female_cms = np.append(label_female_cm, protected_female_cm).flatten() / male_data.shape[0]
+
+        return np.append(male_cms, female_cms)
 
     def model_save(self, path, epoch):
         self.model.save(path + 'bias_model_at_{}.h5'.format(epoch))
