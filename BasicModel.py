@@ -64,6 +64,7 @@ class BasicModel:
         return results
 
     def confusion_matrix(self, data, protected, labels, batch_size=128):
+        cms = self.__gender_confusion_matrix(data, protected, labels)
         protected = np.reshape(protected, (len(protected), 1))
         data = np.append(data, protected, 1)
 
@@ -74,12 +75,54 @@ class BasicModel:
 
         cm = confusion_matrix(labels, predictions)
 
-        return cm.flatten() / labels.shape[0]
+        return np.append(cm.flatten() / labels.shape[0], cms).flatten()
+
+    def __gender_confusion_matrix(self, data, protected, labels, batch_size=128):
+        male_idx = protected == 0
+        female_idx = protected == 1
+
+        male_data = data[male_idx]
+        male_protected = protected[male_idx]
+        male_labels = labels[male_idx]
+
+        female_data = data[female_idx]
+        female_protected = protected[female_idx]
+        female_labels = labels[female_idx]
+
+        male_protected = np.reshape(male_protected, (len(male_protected), 1))
+        female_protected = np.reshape(female_protected, (len(female_protected), 1))
+
+        male_data = np.append(male_data, male_protected, 1)
+        female_data = np.append(female_data, female_protected, 1)
+
+        raw_male = self.model.predict(male_data, batch_size=batch_size)
+        raw_female = self.model.predict(female_data, batch_size=batch_size)
+
+        male_predictions = np.where(raw_male > .5, 1, 0)
+        female_predictions = np.where(raw_female > .5, 1, 0)
+
+        cm_male = confusion_matrix(male_labels, male_predictions)
+        cm_female = confusion_matrix(female_labels, female_predictions)
+
+        cms = np.append(cm_male.flatten() / male_data.shape[0],
+                        cm_female.flatten() / female_data.shape[0]).flatten()
+        return cms
+
+
 
     def __update_epoch_vars(self, loss, acc):
         self.epoch_loss = np.append(self.epoch_loss, loss)
         self.epoch_accuracy = np.append(self.epoch_accuracy, acc)
-    
+
+    @staticmethod
+    def __format_data(data, labels, idxs):
+        print(data.shape)
+        print(labels.shape)
+        print(idxs.shape)
+        print(data[idxs])
+        # print(labels[idxs])
+        return data[idxs, :], labels[idxs]
+
     @staticmethod
     def __reshape_1d(arr):
         return np.reshape(arr, (len(arr), 1))
