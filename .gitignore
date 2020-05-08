@@ -1,4 +1,7 @@
 /kfold/
 /model_testing/
 /AccuracyTesting.py
+.vscode/*
+.ipynb_checkpoints/*
+*.pyc
 /__pychace__/
