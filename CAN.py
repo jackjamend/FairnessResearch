@@ -103,7 +103,7 @@ class CAN:
         return np.take(results, [0,3,4])
     
     def confusion_matrix(self, data, protected, labels, batch_size=128):
-        gender_cms = self.__gender_confusion_matrix(data, protected, labels)
+        gender_cms = self.__gender_confusion_matrix(data.copy(), protected.copy(), labels.copy())
         raw_class_preds, raw_protected_preds = self.model.predict(data, batch_size=batch_size)
         protected = self.__reshape_1d(protected)
         labels = self.__reshape_1d(labels)

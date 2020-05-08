@@ -64,7 +64,7 @@ class BasicModel:
         return results
 
     def confusion_matrix(self, data, protected, labels, batch_size=128):
-        cms = self.__gender_confusion_matrix(data, protected, labels)
+        cms = self.__gender_confusion_matrix(data.copy(), protected.copy(), labels.copy())
         protected = np.reshape(protected, (len(protected), 1))
         data = np.append(data, protected, 1)
 

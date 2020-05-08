@@ -13,6 +13,7 @@ from datetime import datetime
 from DataLoader import DataLoader
 import matplotlib.pyplot as plt
 import csv
+import tensorflow as tf
 
 
 def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=128, testing_inv=10, embed_size=0):
@@ -106,12 +107,12 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
 
     # Training information
     input_size = data.shape[1]
-    kf = KFold(n_splits=num_folds)
+    kf = KFold(n_splits=num_folds, shuffle=True, random_state=7215)
 
     test_results = np.array([])
-
     for i, (train_idx, test_idx) in enumerate(kf.split(data)):
         print("Fold {}".format(i))
+        tf.keras.backend.clear_session()
         if model_type == 0:
             model = BasicModel(input_size)
         elif model_type == 1:
@@ -155,17 +156,18 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
             fold_bars(graph_vals, result_names[i], fig_folder + fig_files[i])
 
 
-epochs = 500
-#
-# run_experiment(0, 0, epochs)
-# run_experiment(1, 0, epochs)
-# run_experiment(2, 0, epochs, embed_size=2)
-# run_experiment(2, 0, epochs, embed_size=3)
-# run_experiment(2, 0, epochs, embed_size=4)
-# run_experiment(3, 0, epochs)
-# run_experiment(0, 1, epochs)
+
+epochs = 100
+
+run_experiment(0, 0, epochs)
+run_experiment(1, 0, epochs)
+run_experiment(2, 0, epochs, embed_size=2)
+run_experiment(2, 0, epochs, embed_size=3)
+run_experiment(2, 0, epochs, embed_size=4)
+run_experiment(3, 0, epochs)
+run_experiment(0, 1, epochs)
 run_experiment(1, 1, epochs)
-# run_experiment(2, 1, epochs, embed_size=2)
-# run_experiment(2, 1, epochs, embed_size=3)
-# run_experiment(2, 1, epochs, embed_size=4)
-# run_experiment(3, 1, epochs)
+run_experiment(2, 1, epochs, embed_size=2)
+run_experiment(2, 1, epochs, embed_size=3)
+run_experiment(2, 1, epochs, embed_size=4)
+run_experiment(3, 1, epochs)

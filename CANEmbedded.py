@@ -124,7 +124,7 @@ class CANEmbedded:
         self.epoch_adversary_accuracy = np.append(self.epoch_adversary_accuracy, adversary_loss)
 
     def confusion_matrix(self, data, protected, labels, batch_size=128):
-        gender_cms = self.__gender_confusion_matrix(data, protected, labels)
+        gender_cms = self.__gender_confusion_matrix(data.copy(), protected.copy(), labels.copy())
         raw_class_preds, raw_protected_preds = self.model.predict(data, batch_size=batch_size)
 
         protected = self.__reshape_1d(protected)
