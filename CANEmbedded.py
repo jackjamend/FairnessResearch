@@ -175,11 +175,12 @@ class CANEmbedded:
         female_protected = self.__reshape_1d(female_protected)
         female_protected_preds = np.where(raw_female_protected_preds > .5, 1, 0)
         protected_female_cm = confusion_matrix(female_protected, female_protected_preds)
-
+        # TODO Update from CAN
         male_cms = np.append(label_male_cm, protected_male_cm).flatten() / male_data.shape[0]
-        female_cms = np.append(label_female_cm, protected_female_cm).flatten() / male_data.shape[0]
-
-        return np.append(male_cms, female_cms)
+        female_cms = np.append(label_female_cm, protected_female_cm).flatten() / female_data.shape[0]
+        classifier_cms = np.append(label_male_cm.flatten() / male_data.shape[0],
+                                   label_female_cm.flatten() / female_data.shape[0])
+        return classifier_cms
 
     def model_save(self, path, epoch):
         self.model.save(path + 'bias_model_at_{}.h5'.format(epoch))

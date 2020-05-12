@@ -117,7 +117,7 @@ class SplitModel:
 
         results_male = self.male_model.evaluate(male_data, male_labels, batch_size=batch_size)
         results_female = self.female_model.evaluate(female_data, female_labels, batch_size=batch_size)
-        return results_male, results_female
+        return np.append(results_male, results_female).flatten()
 
     def confusion_matrix(self, data, protected, labels, batch_size=128):
         male_idx = protected == 0

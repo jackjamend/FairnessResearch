@@ -68,7 +68,7 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
 
         # Confusion Matrix from model
         confusion_mat = model.confusion_matrix(test_data, test_attr, test_label, batch_size)
-
+        # print('record cm ({})'.format(len(confusion_mat)), confusion_mat)
         # Recording Information
         model.create_figs(epoch, fold_fig_folder)
 
@@ -76,7 +76,7 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
         curr_time = datetime.now()
         curr_time_string = curr_time.strftime("%d/%m/%Y %H:%M:%S")
         diff_time = curr_time - start
-
+        # print('test_stats:', test_stats)
         record_vars = [start_string, curr_time_string, diff_time, i, epoch, *test_stats,
                        *confusion_mat, batch_size, fold_fig_folder, fold_model_folder,
                        data_type, embed_size]
@@ -156,18 +156,17 @@ def run_experiment(model_type, data_type, epochs=100, num_folds=5, batch_size=12
             fold_bars(graph_vals, result_names[i], fig_folder + fig_files[i])
 
 
-
 epochs = 100
 
-run_experiment(0, 0, epochs)
-run_experiment(1, 0, epochs)
+# run_experiment(0, 0, epochs)
+# run_experiment(1, 0, epochs)
 run_experiment(2, 0, epochs, embed_size=2)
 run_experiment(2, 0, epochs, embed_size=3)
 run_experiment(2, 0, epochs, embed_size=4)
-run_experiment(3, 0, epochs)
-run_experiment(0, 1, epochs)
-run_experiment(1, 1, epochs)
+# run_experiment(3, 0, epochs)
+# run_experiment(0, 1, epochs)
+# run_experiment(1, 1, epochs)
 run_experiment(2, 1, epochs, embed_size=2)
 run_experiment(2, 1, epochs, embed_size=3)
 run_experiment(2, 1, epochs, embed_size=4)
-run_experiment(3, 1, epochs)
+# run_experiment(3, 1, epochs)

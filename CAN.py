@@ -117,7 +117,8 @@ class CAN:
         protected_cm = confusion_matrix(protected, protected_preds).flatten()
 
         cms = np.append(class_cm, protected_cm).flatten() / labels.shape[0]
-        
+        print('cms ({}):'.format(len(cms)), cms)
+        print('gender cms ({}):'.format(len(gender_cms)), gender_cms)
         return np.append(cms, gender_cms).flatten()
 
     def __gender_confusion_matrix(self, data, protected, labels, batch_size=128):
@@ -128,16 +129,20 @@ class CAN:
         male_protected = protected[male_idx]
         male_labels = labels[male_idx]
 
-        # For Male
+        # For Male class
         raw_male_class_preds, raw_male_protected_preds = self.model.predict(male_data, batch_size=batch_size)
 
         male_labels = self.__reshape_1d(male_labels)
         male_class_preds = np.where(raw_male_class_preds > .5, 1, 0)
         label_male_cm = confusion_matrix(male_labels, male_class_preds)
+        # print('label male ({})'.format(len(label_male_cm)), label_male_cm)
 
         male_protected = self.__reshape_1d(male_protected)
         male_protected_preds = np.where(raw_male_protected_preds > .5, 1, 0)
         protected_male_cm = confusion_matrix(male_protected, male_protected_preds)
+        # print('prot sum:', sum(male_protected), len(male_protected))
+        # print('preds sum:', sum(male_protected_preds), len(male_protected_preds))
+        # print('protect male ({})'.format(len(protected_male_cm)), protected_male_cm)
 
         # For female
         female_data = data[female_idx]
@@ -153,11 +158,18 @@ class CAN:
         female_protected = self.__reshape_1d(female_protected)
         female_protected_preds = np.where(raw_female_protected_preds > .5, 1, 0)
         protected_female_cm = confusion_matrix(female_protected, female_protected_preds)
+        # print('fema prot sum:', sum(female_protected), len(female_protected))
+        # print('preds sum:', sum(female_protected_preds), len(female_protected_preds))
+        # print('all female preds:', female_protected_preds.flatten())
+        # print('act female preds:', female_protected.flatten())
 
+        # TODO: fix so only classifer evaluated here
+        classifier_cms = np.append(label_male_cm.flatten() / male_data.shape[0], label_female_cm.flatten() / female_data.shape[0])
         male_cms = np.append(label_male_cm, protected_male_cm).flatten() / male_data.shape[0]
         female_cms = np.append(label_female_cm, protected_female_cm).flatten() / female_data.shape[0]
-
-        return np.append(male_cms, female_cms)
+        # print('male cms ({}):'.format(len(male_cms)), male_cms)
+        # print('female cms ({}):'.format(len(female_cms)), female_cms)
+        return classifier_cms
 
 
     def model_save(self, path, epoch):
